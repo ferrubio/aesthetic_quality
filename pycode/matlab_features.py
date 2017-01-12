@@ -55,7 +55,7 @@ phog_files=['2_bins360_levels0_angle360.arff', '3_bins300_levels0_angle360.arff'
             '8_bins100_levels1_angle360.arff', '9_bins50_levels1_angle360.arff', '10_bins20_levels1_angle360_redux.arff',
             '11_bins50_levels2_angle360.arff', '12_bins20_levels2_angle360.arff']
 
-delta = sys.argv[3]
+delta = int(sys.argv[3])
 
 
 # In[ ]:
