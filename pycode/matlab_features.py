@@ -68,8 +68,8 @@ else:
 
 # In[17]:
 
-delta = 0
-features = utilsData.readARFF(main_path+'AVA/PHOG/10_bins20_levels1_angle360_redux.arff')
+#delta = 0
+#features = utilsData.readARFF(main_path+'AVA/PHOG/10_bins20_levels1_angle360_redux.arff')
 
 
 # In[18]:
