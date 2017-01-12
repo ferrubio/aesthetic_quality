@@ -2,11 +2,11 @@
 # coding: utf-8
 
 # # Classifiers based on features extracted from matlab
-# 
+#
 # In this notebook we use the different arff files obtained from matlab. We will use this features to obtain classifiers and test them in a cross validation process.
-# 
+#
 # ## A bit of set up
-# 
+#
 # We need numpy and pandas for data. Pickle and gzip for read the extracted features
 
 # In[2]:
@@ -32,23 +32,23 @@ from sklearn.naive_bayes import GaussianNB
 
 import sys
 sys.path.append('/home/frubio/python/mlframework/mlframework/')
-sys.path.append('../pycode/')
+sys.path.append('pycode/')
 from dataset.normal_dataset import normal_dataset
 import utilsData
 
 
 # ## Feature reading
-# 
+#
 # In this example only one package is read, but each ones have a size of 80Mb approximately.
 
 # In[14]:
 
-data = pickle.load(gzip.open('/home/frubio/python/EMtest/info.pklz','rb',2))
+data = pickle.load(gzip.open('packages/info.pklz','rb',2))
 
 
 # In[15]:
 
-main_path='/home/frubio/EM_descriptors/'
+main_path='features/'
 total_files=['PHOG/','CHIST.arff', 'GHIST.arff', 'GIST_ori8_block4.arff', 'Centrist.arff']
 phog_files=['2_bins360_levels0_angle360.arff', '3_bins300_levels0_angle360.arff', '4_bins200_levels0_angle360.arff',
             '5_bins100_levels0_angle360.arff', '6_bins50_levels0_angle360.arff', '7_bins20_levels0_angle360.arff',
@@ -122,9 +122,9 @@ features = features.reshape((batches,-1,num_features))
 
 
 # ## Cross validation
-# 
+#
 # In this case, we prepare vectors with the batches of each fold in order to test them in galgo and store the results.
-# 
+#
 # * First, we split the batches in 5 folds:
 
 # In[24]:
@@ -143,18 +143,18 @@ def balance_class(features, classes):
         aux_value = np.sum(classes == i)
         if aux_value < min_class[1]:
             min_class = np.array([i,aux_value])
-            
+
     final_indexes = np.where(classes == min_class[0])[0]
     for i in classes_uniques:
         if i != min_class[0]:
             aux_indexes = np.where(classes == i)[0]
             #print np.random.choice(aux_indexes,replace=False,size=min_class[1])
             final_indexes = np.concatenate((final_indexes,np.random.choice(aux_indexes,replace=False,size=min_class[1])))
-            
+
     final_indexes = np.sort(final_indexes)
-    
+
     return (features[final_indexes],classes[final_indexes])
-                                
+
 
 
 # In[26]:
@@ -164,40 +164,40 @@ sum_folds_nbg = 0
 matrix_svm = np.zeros((2,2))
 matrix_nbg = np.zeros((2,2))
 for i in range(0, num_folds):
-    
+
     # Prepare train
     train_indices = np.delete(folds,i,axis=0).reshape(-1)
     train_features = features[train_indices].reshape((-1,num_features))
     train_classes = classes[train_indices].reshape((-1))
     train_features,train_classes = balance_class(train_features,train_classes)
-    
+
     # Fit models
     svm_clf = svm.LinearSVC()
     svm_clf.fit(train_features, train_classes)
 
     nbg_clf = GaussianNB()
     nbg_clf.fit(train_features, train_classes)
-    
+
     # Prepare test
     test_indices = folds[i]
     test_features = features[test_indices].reshape((-1,num_features))
     test_classes = classes[test_indices].reshape((-1))
-    
+
     # Evaluate SVM model
     predictions = svm_clf.predict(test_features)
     results = np.sum(predictions == test_classes)/float(len(predictions))
     sum_folds_svm += results
-    
+
     matrix_svm[0,0] += np.sum(predictions[predictions == test_classes] == 0)
     matrix_svm[0,1] += np.sum(predictions[predictions != test_classes] == 1)
     matrix_svm[1,0] += np.sum(predictions[predictions != test_classes] == 0)
     matrix_svm[1,1] += np.sum(predictions[predictions == test_classes] == 1)
-    
+
     # Evaluate gnb model
     predictions = nbg_clf.predict(test_features)
     results = np.sum(predictions == test_classes)/float(len(predictions))
     sum_folds_nbg += results
-    
+
     matrix_nbg[0,0] += np.sum(predictions[predictions == test_classes] == 0)
     matrix_nbg[0,1] += np.sum(predictions[predictions != test_classes] == 1)
     matrix_nbg[1,0] += np.sum(predictions[predictions != test_classes] == 0)
@@ -216,4 +216,3 @@ if sys.argv[1] == '0':
     pickle.dump(data_results, gzip.open("results/GNB_balanced_Descriptor%d_Case%d.pklz" % (int(sys.argv[1]),int(sys.argv[2])), "wb" ), 2)
 else:
     pickle.dump(data_results, gzip.open("results/GNB_balanced_Descriptor%d.pklz" % (int(sys.argv[1])), "wb" ), 2)
-
