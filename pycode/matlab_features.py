@@ -9,7 +9,7 @@
 #
 # We need numpy and pandas for data. Pickle and gzip for read the extracted features
 
-# In[2]:
+# In[ ]:
 
 # set up Python environment: numpy for numerical routines
 import numpy as np
@@ -22,13 +22,13 @@ import gzip
 
 # In this example we only use the default linear SVM classifier from libsvm and the Gaussian NB from sklearn
 
-# In[9]:
+# In[ ]:
 
 from sklearn import svm
 from sklearn.naive_bayes import GaussianNB
 
 
-# In[13]:
+# In[ ]:
 
 import sys
 sys.path.append('/home/frubio/python/mlframework/mlframework/')
@@ -41,14 +41,13 @@ import utilsData
 #
 # In this example only one package is read, but each ones have a size of 80Mb approximately.
 
-# In[14]:
+# In[ ]:
 
 data = pickle.load(gzip.open('packages/info.pklz','rb',2))
 
 
-# In[15]:
+# In[ ]:
 
-main_path='features/'
 total_files=['PHOG/','CHIST.arff', 'GHIST.arff', 'GIST_ori8_block4.arff', 'Centrist.arff']
 phog_files=['2_bins360_levels0_angle360.arff', '3_bins300_levels0_angle360.arff', '4_bins200_levels0_angle360.arff',
             '5_bins100_levels0_angle360.arff', '6_bins50_levels0_angle360.arff', '7_bins20_levels0_angle360.arff',
@@ -56,23 +55,19 @@ phog_files=['2_bins360_levels0_angle360.arff', '3_bins300_levels0_angle360.arff'
             '11_bins50_levels2_angle360.arff', '12_bins20_levels2_angle360.arff']
 
 delta = int(sys.argv[3])
+# this is for use the same random than in DeCAF
+batches = 100
 
 
 # In[ ]:
 
 if sys.argv[1] == '0':
-    features = utilsData.readARFF(main_path+'AVA/'+total_files[int(sys.argv[1])]+phog_files[int(sys.argv[2])])
+    features = utilsData.readARFF('features/AVA/'+total_files[int(sys.argv[1])]+phog_files[int(sys.argv[2])])
 else:
-    features = utilsData.readARFF(main_path+'AVA/'+total_files[int(sys.argv[1])])
+    features = utilsData.readARFF('features/AVA/'+total_files[int(sys.argv[1])])
 
 
-# In[17]:
-
-delta = 0
-features = utilsData.readARFF(main_path+'AVA/PHOG/10_bins20_levels1_angle360_redux.arff')
-
-
-# In[18]:
+# In[ ]:
 
 features=pd.DataFrame(features['data'],columns=features['vars'])
 features=features.rename(columns=(lambda x: 'var'+str(int(x[3:])-1)))
@@ -82,43 +77,31 @@ num_features = len(features.columns)-1
 data=pd.merge(data, features, on='id', how='right')
 
 
-# In[19]:
+# In[ ]:
 
 num_images = len(data)
 
 votesList=np.array(data.iloc[:,2:12])
 auxTotal=np.sum(votesList,axis=1)
 auxMeanVector=np.sum(votesList*range(1,11),axis=1)/auxTotal.astype(np.float)
-auxWeight=np.array(auxMeanVector >= 5, dtype=np.int)
+auxClass=np.array(auxMeanVector >= 5, dtype=np.int)
 
 data.loc[:,'VotesMean'] = pd.Series(auxMeanVector, index=data.index)
-data.loc[:,'Weight'] = pd.Series(auxWeight, index=data.index)
+data.loc[:,'Class'] = pd.Series(auxClass, index=data.index)
 
 
-# In[20]:
+# In[ ]:
 
 data.loc[:,'id'] = data['id'].apply(str)
-classes = np.array(data.sort_values(['id']).loc[:,'Weight'])
+classes = np.array(data.sort_values(['id']).loc[:,'Class'])
 features = np.array(data.sort_values(['id']).iloc[:,37:num_features+37])
+means = np.array(data.sort_values(['id']).loc[:,'VotesMean'])
 
 
-# In order to use the same cases than in DeCAFF we have to separate the features and the classes in batches
+# In[ ]:
 
-# In[21]:
-
-batches = 10
-
-
-# In[22]:
-
-classes = classes[:len(classes)-(len(classes) % batches)]
-classes = classes.reshape((batches,-1))
-
-
-# In[23]:
-
-features = features[:len(features)-(len(features) % batches)]
-features = features.reshape((batches,-1,num_features))
+indexes = np.array(range(0,len(classes))[:len(classes)-(len(classes) % batches)])
+indexes = indexes.reshape((batches,-1))
 
 
 # ## Cross validation
@@ -127,14 +110,14 @@ features = features.reshape((batches,-1,num_features))
 #
 # * First, we split the batches in 5 folds:
 
-# In[24]:
+# In[ ]:
 
 np.random.seed(1000)
 num_folds = 5
 folds = np.random.choice(range(0,batches),replace=False,size=(num_folds,batches/num_folds))
 
 
-# In[25]:
+# In[ ]:
 
 def balance_class(features, classes):
     classes_uniques = np.unique(classes)
@@ -157,7 +140,7 @@ def balance_class(features, classes):
 
 
 
-# In[26]:
+# In[ ]:
 
 sum_folds_svm = 0
 sum_folds_nbg = 0
@@ -166,9 +149,17 @@ matrix_nbg = np.zeros((2,2))
 for i in range(0, num_folds):
 
     # Prepare train
-    train_indices = np.delete(folds,i,axis=0).reshape(-1)
-    train_features = features[train_indices].reshape((-1,num_features))
-    train_classes = classes[train_indices].reshape((-1))
+    train_indices = indexes[np.delete(folds,i,axis=0).reshape(-1)].reshape(-1)
+    train_features = features[train_indices]
+    train_classes = classes[train_indices]
+    train_means = means[train_indices]
+
+    # Delete values depending on the delta
+    vector_out_delta = (train_means <= 5-delta) | (train_means >= 5+delta)
+    train_features = train_features[vector_out_delta]
+    train_classes = train_classes[vector_out_delta]
+
+    # Class balance
     train_features,train_classes = balance_class(train_features,train_classes)
 
     # Fit models
@@ -179,9 +170,9 @@ for i in range(0, num_folds):
     nbg_clf.fit(train_features, train_classes)
 
     # Prepare test
-    test_indices = folds[i]
-    test_features = features[test_indices].reshape((-1,num_features))
-    test_classes = classes[test_indices].reshape((-1))
+    test_indices = indexes[folds[i]].reshape(-1)
+    test_features = features[test_indices]
+    test_classes = classes[test_indices]
 
     # Evaluate SVM model
     predictions = svm_clf.predict(test_features)
@@ -202,6 +193,9 @@ for i in range(0, num_folds):
     matrix_nbg[0,1] += np.sum(predictions[predictions != test_classes] == 1)
     matrix_nbg[1,0] += np.sum(predictions[predictions != test_classes] == 0)
     matrix_nbg[1,1] += np.sum(predictions[predictions == test_classes] == 1)
+
+
+# In[ ]:
 
 data_results = {'accuracy':sum_folds_svm/num_folds, 'conf_matrix':matrix_svm, 'classifier':'SVM-L', 'descriptor':total_files[int(sys.argv[1])], 'delta':delta}
 if sys.argv[1] == '0':
