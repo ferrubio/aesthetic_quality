@@ -66,7 +66,6 @@ if sys.argv[1] == '0':
 else:
     features = utilsData.readARFF('features/AVA/'+total_files[int(sys.argv[1])])
 
-
 # In[ ]:
 
 features=pd.DataFrame(features['data'],columns=features['vars'])
