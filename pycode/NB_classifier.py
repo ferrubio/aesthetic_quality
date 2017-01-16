@@ -193,9 +193,6 @@ for i in range(0, num_folds):
     features = read_and_format_features(test_indices[0:1],batch_H,batch_W,directory_file)
     test_classes = read_and_format_classes(test_indices[0:1],batch_H,classes)
 
-    # PCA
-    features = pca.transform(features)
-
     # Evaluate model
     predictions = gnb_clf.predict(features)
     results = np.sum(predictions == test_classes)/float(len(predictions))
