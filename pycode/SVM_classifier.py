@@ -2,10 +2,10 @@
 # coding: utf-8
 
 # ## A bit of set up
-# 
+#
 # We need numpy and pandas for data. Pickle and gzip for read the extracted features
 
-# In[1]:
+# In[ ]:
 
 # set up Python environment: numpy for numerical routines
 import numpy as np
@@ -16,33 +16,37 @@ import pickle
 import gzip
 
 
-# In this example we only use the default linear SVM classifier (SVC) from sklearn
+# In this example we only use the default linear SVM classifier from libsvm and the Gaussian NB from sklearn
 
-# In[2]:
+# In[ ]:
 
 import sys
-sys.path.append('/home/frubio/Mat_Docs/libsvm-3.20/python/')
-
-from svmutil import *
-from sklearn.naive_bayes import GaussianNB
+from sklearn import svm
+from sklearn.decomposition import PCA
 
 
 # ## Feature reading
-# 
+#
 # In this example only one package is read, but each ones have a size of 80Mb approximately.
 
-# In[25]:
+# In[ ]:
 
-directory_file = "fc6_caffenet/fc6_caffenet_%02d.pklz"
 batches = 100
+path_layers = ("fc6_caffenet","fc7_caffenet","pool5_caffenet","pool5_ResNet-152")
 
 
-# In[27]:
+# In[ ]:
+
+select_layer = int(sys.argv[1])
+directory_file = "features/AVA/%s/%s"%(path_layers[select_layer],path_layers[select_layer])+"_%02d.pklz"
+
+
+# In[ ]:
 
 features=pickle.load(gzip.open(directory_file % 0,'rb',2))
 
 
-# In[28]:
+# In[ ]:
 
 batch_H = features.shape[0]
 features = features.reshape((batch_H,-1))
@@ -52,14 +56,14 @@ batch_W = features.shape[1]
 # Now is the turn for the classes:
 # * First we read the information of AVA in pandas dataframe format
 
-# In[12]:
+# In[ ]:
 
-data=pickle.load(gzip.open('../info.pklz','rb',2))
+data=pickle.load(gzip.open('packages/info.pklz','rb',2))
 
 
 # * We calculate the mean of the votes and the weight (class)
 
-# In[13]:
+# In[ ]:
 
 num_images=len(data)
 auxWeight=np.zeros(num_images,dtype=np.int)
@@ -76,7 +80,7 @@ data.loc[:,'VotesMean'] = pd.Series(auxMeanVector, index=data.index)
 
 # * Finally, we transform the id to string and sort the information to extract the corresponding classes in a vector
 
-# In[14]:
+# In[ ]:
 
 data.loc[:,'id'] = data['id'].apply(str)
 classes = np.array(data.sort_values(['id']).loc[:,'Weight'])
@@ -84,18 +88,19 @@ classes = np.array(data.sort_values(['id']).loc[:,'Weight'])
 
 # * In order to have the same structure with respect to the features, where they are splitted in batches, we do the same with the classes
 
-# In[15]:
+# In[ ]:
 
 classes = classes[:len(classes)-(len(classes) % batches)]
 classes = classes.reshape((batches,-1))
 
+
 # ## Cross validation
-# 
+#
 # In this case, we prepare vectors with the batches of each fold in order to test them in galgo and store the results.
-# 
+#
 # * First, we split the batches in 5 folds:
 
-# In[16]:
+# In[ ]:
 
 np.random.seed(1000)
 num_folds = 5
@@ -104,75 +109,106 @@ folds = np.random.choice(range(0,batches),replace=False,size=(num_folds,batches/
 
 # * We start the for, where the features are read and resimensioned in order to train the model, and then, the test is read in the same way and the predictions are made
 
-# In[21]:
+# In[ ]:
 
 def read_and_format_features(indices_list,batch_H,batch_W,directory_file):
     num_batches = len(indices_list)
     features = np.zeros((num_batches*batch_H, batch_W))
-    
+
     pre_count = 0
     post_count = batch_H
-    
+
     for i in indices_list:
         features_aux = pickle.load(gzip.open(directory_file % i,'rb',2))
         features[pre_count:post_count] = features_aux.reshape((batch_H, batch_W))
         pre_count = post_count
-        post_count += batch_H 
-        
+        post_count += batch_H
+
     return features
-    
 
 
-# In[18]:
+
+# In[ ]:
 
 def read_and_format_classes(indices_list, batch_H, classes):
     num_batches = len(indices_list)
     train_classes = np.zeros(num_batches*batch_H)
-    
+
     pre_count = 0
     post_count = batch_H
 
     for i in indices_list:
         train_classes[pre_count:post_count] = classes[i]
-        
+
         pre_count = post_count
-        post_count += batch_H 
-        
+        post_count += batch_H
+
     return train_classes
-    
+
+
+
+# In[ ]:
+
+def balance_class(features, classes):
+    classes_uniques = np.unique(classes)
+    min_class = np.array([0,float('Inf')])
+    for i in classes_uniques:
+        aux_value = np.sum(classes == i)
+        if aux_value < min_class[1]:
+            min_class = np.array([i,aux_value])
+
+    final_indexes = np.where(classes == min_class[0])[0]
+    for i in classes_uniques:
+        if i != min_class[0]:
+            aux_indexes = np.where(classes == i)[0]
+            #print np.random.choice(aux_indexes,replace=False,size=min_class[1])
+            final_indexes = np.concatenate((final_indexes,np.random.choice(aux_indexes,replace=False,size=min_class[1])))
+
+    final_indexes = np.sort(final_indexes)
+
+    return (features[final_indexes],classes[final_indexes])
 
 
 # In[ ]:
 
 results = np.zeros(num_folds)
+sum_folds_svm = 0
+matrix_svm = np.zeros((2,2))
 for i in range(0, num_folds):
-    
+
     # Prepare train
     train_indices = np.delete(folds,i,axis=0).reshape(-1)
-    
-    features = read_and_format_features(train_indices[0:1],batch_H,batch_W,directory_file)
-    train_classes = read_and_format_classes(train_indices[0:1],batch_H,classes)
-    
-    # Fit models
-    prob  = svm_problem(train_classes.tolist(), features.tolist())
-    param = svm_parameter('-t 0')
-    svm_clf = svm_train(prob, param)
 
-    gnb_clf = GaussianNB()
-    gnb_clf.fit(features, train_classes)
-    
+    features = read_and_format_features(train_indices,batch_H,batch_W,directory_file)
+    train_classes = read_and_format_classes(train_indices,batch_H,classes)
+    features,train_classes = balance_class(features,train_classes)
+
+    # Train PCA
+    pca = PCA(n_components=512)
+    pca.fit(features)
+    features = pca.transform(features)
+
+    # Fit models
+    svm_clf = svm.LinearSVC()
+    svm_clf.fit(features, train_classes)
+
     # Prepare test
     test_indices = folds[i]
-    
-    features = read_and_format_features(test_indices[0:1],batch_H,batch_W,directory_file)
-    test_classes = read_and_format_classes(test_indices[0:1],batch_H,classes)
-    
-    # Evaluate model
-    _, p_acc, _ = svm_predict(test_classes.tolist(), features.tolist(), svm_clf)
-    pickle.dump(p_acc[0]/100, gzip.open( "results/SVM_fc6_fold%d.pklz" % i, "wb" ), 2)
-    
-    predictions = gnb_clf.predict(features)
-    results = np.sum(predictions == test_classes)/float(len(predictions))
-    pickle.dump(results, gzip.open( "results/GNB_fc6_fold%d.pklz" % i, "wb" ), 2)
-    
 
+    features = read_and_format_features(test_indices,batch_H,batch_W,directory_file)
+    test_classes = read_and_format_classes(test_indices,batch_H,classes)
+
+    # PCA for test
+    features = pca.transform(features)
+
+    # Evaluate model
+    predictions = svm_clf.predict(features)
+    results = np.sum(predictions == test_classes)/float(len(predictions))
+    sum_folds_svm += results
+
+    matrix_svm[0,0] += np.sum(predictions[predictions == test_classes] == 0)
+    matrix_svm[0,1] += np.sum(predictions[predictions != test_classes] == 1)
+    matrix_svm[1,0] += np.sum(predictions[predictions != test_classes] == 0)
+    matrix_svm[1,1] += np.sum(predictions[predictions == test_classes] == 1)
+
+pickle.dump(p_acc[0]/100, gzip.open( "results/PCA_SVM_balanced_%s.pklz" % (path_layers[select_layer]), "wb" ), 2)
