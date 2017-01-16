@@ -5,7 +5,7 @@
 #
 # We need numpy and pandas for data. Pickle and gzip for read the extracted features
 
-# In[ ]:
+# In[1]:
 
 # set up Python environment: numpy for numerical routines
 import numpy as np
@@ -18,10 +18,9 @@ import gzip
 
 # In this example we only use the default linear SVM classifier from libsvm and the Gaussian NB from sklearn
 
-# In[ ]:
+# In[2]:
 
-import sys
-from sklearn import svm
+from sklearn.naive_bayes import GaussianNB
 from sklearn.decomposition import PCA
 
 
@@ -29,7 +28,7 @@ from sklearn.decomposition import PCA
 #
 # In this example only one package is read, but each ones have a size of 80Mb approximately.
 
-# In[ ]:
+# In[1]:
 
 batches = 100
 path_layers = ("fc6_caffenet","fc7_caffenet","pool5_caffenet","pool5_ResNet-152")
@@ -42,12 +41,12 @@ delta = int(sys.argv[2])
 directory_file = "features/AVA/%s/%s"%(path_layers[select_layer],path_layers[select_layer])+"_%02d.pklz"
 
 
-# In[ ]:
+# In[19]:
 
 features=pickle.load(gzip.open(directory_file % 0,'rb',2))
 
 
-# In[ ]:
+# In[20]:
 
 batch_H = features.shape[0]
 features = features.reshape((batch_H,-1))
@@ -57,14 +56,14 @@ batch_W = features.shape[1]
 # Now is the turn for the classes:
 # * First we read the information of AVA in pandas dataframe format
 
-# In[ ]:
+# In[6]:
 
 data=pickle.load(gzip.open('packages/info.pklz','rb',2))
 
 
 # * We calculate the mean of the votes and the weight (class)
 
-# In[ ]:
+# In[7]:
 
 num_images=len(data)
 auxWeight=np.zeros(num_images,dtype=np.int)
@@ -81,7 +80,7 @@ data.loc[:,'VotesMean'] = pd.Series(auxMeanVector, index=data.index)
 
 # * Finally, we transform the id to string and sort the information to extract the corresponding classes in a vector
 
-# In[ ]:
+# In[8]:
 
 data.loc[:,'id'] = data['id'].apply(str)
 classes = np.array(data.sort_values(['id']).loc[:,'Weight'])
@@ -89,7 +88,7 @@ classes = np.array(data.sort_values(['id']).loc[:,'Weight'])
 
 # * In order to have the same structure with respect to the features, where they are splitted in batches, we do the same with the classes
 
-# In[ ]:
+# In[9]:
 
 classes = classes[:len(classes)-(len(classes) % batches)]
 classes = classes.reshape((batches,-1))
@@ -101,7 +100,7 @@ classes = classes.reshape((batches,-1))
 #
 # * First, we split the batches in 5 folds:
 
-# In[ ]:
+# In[10]:
 
 np.random.seed(1000)
 num_folds = 5
@@ -110,7 +109,7 @@ folds = np.random.choice(range(0,batches),replace=False,size=(num_folds,batches/
 
 # * We start the for, where the features are read and resimensioned in order to train the model, and then, the test is read in the same way and the predictions are made
 
-# In[ ]:
+# In[11]:
 
 def read_and_format_features(indices_list,batch_H,batch_W,directory_file):
     num_batches = len(indices_list)
@@ -129,7 +128,7 @@ def read_and_format_features(indices_list,batch_H,batch_W,directory_file):
 
 
 
-# In[ ]:
+# In[12]:
 
 def read_and_format_classes(indices_list, batch_H, classes):
     num_batches = len(indices_list)
@@ -148,7 +147,7 @@ def read_and_format_classes(indices_list, batch_H, classes):
 
 
 
-# In[ ]:
+# In[13]:
 
 def balance_class(features, classes):
     classes_uniques = np.unique(classes)
@@ -173,8 +172,52 @@ def balance_class(features, classes):
 # In[ ]:
 
 results = np.zeros(num_folds)
-sum_folds_svm = 0
-matrix_svm = np.zeros((2,2))
+sum_folds_nbg = 0
+matrix_nbg = np.zeros((2,2))
+for i in range(0, num_folds):
+
+    # Prepare train
+    train_indices = np.delete(folds,i,axis=0).reshape(-1)
+
+    features = read_and_format_features(train_indices[0:1],batch_H,batch_W,directory_file)
+    train_classes = read_and_format_classes(train_indices[0:1],batch_H,classes)
+    features,train_classes = balance_class(features,train_classes)
+
+    # Fit models
+    gnb_clf = GaussianNB()
+    gnb_clf.fit(features, train_classes)
+
+    # Prepare test
+    test_indices = folds[i]
+
+    features = read_and_format_features(test_indices[0:1],batch_H,batch_W,directory_file)
+    test_classes = read_and_format_classes(test_indices[0:1],batch_H,classes)
+
+    # PCA
+    features = pca.transform(features)
+
+    # Evaluate model
+    predictions = gnb_clf.predict(features)
+    results = np.sum(predictions == test_classes)/float(len(predictions))
+    sum_folds_nbg += results
+
+    matrix_nbg[0,0] += np.sum(predictions[predictions == test_classes] == 0)
+    matrix_nbg[0,1] += np.sum(predictions[predictions != test_classes] == 1)
+    matrix_nbg[1,0] += np.sum(predictions[predictions != test_classes] == 0)
+    matrix_nbg[1,1] += np.sum(predictions[predictions == test_classes] == 1)
+
+
+# In[ ]:
+
+data_results = {'accuracy':sum_folds_nbg/num_folds, 'conf_matrix':matrix_nbg, 'classifier':'NB-G', 'descriptor':path_layers[select_layer], 'delta':delta}
+pickle.dump(data_results, gzip.open( "results/GNB_balanced_%s.pklz" % (path_layers[select_layer]), "wb" ), 2)
+
+
+# In[ ]:
+
+results = np.zeros(num_folds)
+sum_folds_nbg = 0
+matrix_nbg = np.zeros((2,2))
 for i in range(0, num_folds):
 
     # Prepare train
@@ -184,14 +227,14 @@ for i in range(0, num_folds):
     train_classes = read_and_format_classes(train_indices,batch_H,classes)
     features,train_classes = balance_class(features,train_classes)
 
-    # Train PCA
+    # PCA
     pca = PCA(n_components=512)
     pca.fit(features)
     features = pca.transform(features)
 
     # Fit models
-    svm_clf = svm.LinearSVC()
-    svm_clf.fit(features, train_classes)
+    gnb_clf = GaussianNB()
+    gnb_clf.fit(features, train_classes)
 
     # Prepare test
     test_indices = folds[i]
@@ -199,21 +242,21 @@ for i in range(0, num_folds):
     features = read_and_format_features(test_indices,batch_H,batch_W,directory_file)
     test_classes = read_and_format_classes(test_indices,batch_H,classes)
 
-    # PCA for test
+    # PCA
     features = pca.transform(features)
 
     # Evaluate model
-    predictions = svm_clf.predict(features)
+    predictions = gnb_clf.predict(features)
     results = np.sum(predictions == test_classes)/float(len(predictions))
-    sum_folds_svm += results
+    sum_folds_nbg += results
 
-    matrix_svm[0,0] += np.sum(predictions[predictions == test_classes] == 0)
-    matrix_svm[0,1] += np.sum(predictions[predictions != test_classes] == 1)
-    matrix_svm[1,0] += np.sum(predictions[predictions != test_classes] == 0)
-    matrix_svm[1,1] += np.sum(predictions[predictions == test_classes] == 1)
+    matrix_nbg[0,0] += np.sum(predictions[predictions == test_classes] == 0)
+    matrix_nbg[0,1] += np.sum(predictions[predictions != test_classes] == 1)
+    matrix_nbg[1,0] += np.sum(predictions[predictions != test_classes] == 0)
+    matrix_nbg[1,1] += np.sum(predictions[predictions == test_classes] == 1)
 
 
 # In[ ]:
 
-data_results = {'accuracy':sum_folds_svm/num_folds, 'conf_matrix':matrix_svm, 'classifier':'SVM-L', 'descriptor':path_layers[select_layer], 'delta':delta}
-pickle.dump(data_results, gzip.open( "results/SVM_balanced_PCA_%s.pklz" % (path_layers[select_layer]), "wb" ), 2)
+data_results = {'accuracy':sum_folds_nbg/num_folds, 'conf_matrix':matrix_nbg, 'classifier':'NB-G', 'descriptor':path_layers[select_layer], 'delta':delta}
+pickle.dump(data_results, gzip.open( "results/GNB_balanced_PCA_%s.pklz" % (path_layers[select_layer]), "wb" ), 2)
