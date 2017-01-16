@@ -16,10 +16,10 @@ import pickle
 import gzip
 
 
-# In this example we only use the default linear SVM classifier from libsvm and the Gaussian NB from sklearn
+# In this example we only use the default Gaussian NB from sklearn
 
 # In[2]:
-
+import sys
 from sklearn.naive_bayes import GaussianNB
 from sklearn.decomposition import PCA
 
