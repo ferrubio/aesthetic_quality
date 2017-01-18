@@ -179,8 +179,8 @@ for i in range(0, num_folds):
     # Prepare train
     train_indices = np.delete(folds,i,axis=0).reshape(-1)
 
-    features = read_and_format_features(train_indices[0:1],batch_H,batch_W,directory_file)
-    train_classes = read_and_format_classes(train_indices[0:1],batch_H,classes)
+    features = read_and_format_features(train_indices,batch_H,batch_W,directory_file)
+    train_classes = read_and_format_classes(train_indices,batch_H,classes)
     features,train_classes = balance_class(features,train_classes)
 
     # Fit models
@@ -190,8 +190,8 @@ for i in range(0, num_folds):
     # Prepare test
     test_indices = folds[i]
 
-    features = read_and_format_features(test_indices[0:1],batch_H,batch_W,directory_file)
-    test_classes = read_and_format_classes(test_indices[0:1],batch_H,classes)
+    features = read_and_format_features(test_indices,batch_H,batch_W,directory_file)
+    test_classes = read_and_format_classes(test_indices,batch_H,classes)
 
     # Evaluate model
     predictions = gnb_clf.predict(features)
