@@ -10,8 +10,6 @@ import sys
 import pickle
 import gzip
 
-import matplotlib.pyplot as plt
-get_ipython().magic('matplotlib inline')
 
 mainPath='/home/frubio/AVA/'
 
