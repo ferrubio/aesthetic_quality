@@ -6,14 +6,14 @@
 import os, os.path
 import numpy as np
 import pandas as pd
-import cv2
+
 import sys
 import pickle
 import gzip
 import sys
 
 mainPath='/home/frubio/AVA/'
-featuresPath = "/home/frubio/aesthetic_quality/features/dSIFT/initialRad{:d}_scales{:d}_factor{:.1f}/AVA/"
+featuresPath = "/home/frubio/python/aesthetic_quality/features/dSIFT/initialRad{:d}_scales{:d}_factor{:.1f}/AVA/"
 
 sys.path.insert(0,'pycode')
 import fisher_vector
@@ -34,9 +34,9 @@ initial_radius = 16
 factor_step = 1.2
 
 # Parameters for the FV
-size_patch = 1000000
+size_patch = 500000
 size_PCA = 64
-size_gmm = 256
+size_gmm = 128
 
 # Parameters for the cross validation
 np.random.seed(1000)
@@ -155,11 +155,10 @@ class FV_dictionary:
 # In[ ]:
 
 sum_folds_sgd = 0
-sum_folds_nbg = 0
 matrix_sgd = np.zeros((2,2))
-matrix_nbg = np.zeros((2,2))
-for i in range(0, 1):
-    
+
+for i in range(0, num_folds):
+    print ("Fold {:d}".format(i))
     # Prepare train
     train_indexes = indexes[np.delete(folds,i,axis=0).reshape(-1)].reshape(-1)
     train_means = means[train_indexes]
@@ -172,23 +171,24 @@ for i in range(0, 1):
     # Class balance
     train_indexes,train_classes = balance_class(train_indexes,train_classes)
     
+
     # Only take into account those features from the final train set
     dictionary = FV_dictionary(size_PCA,size_patch,size_gmm)
     dictionary.generate_dict(train_indexes,np.array(data.sort_values(['id'])['id']),featuresPath.format(initial_radius,scales,factor_step))
     train_features = dictionary.obtain_fv(train_indexes,np.array(data.sort_values(['id'])['id']),featuresPath.format(initial_radius,scales,factor_step))
-    
+    print("features shape")
+    print(train_features.shape)
     
     # Fit models
     sgd_clf = SGDClassifier(loss="hinge", penalty="l2")
     sgd_clf.fit(train_features, train_classes)
-
-    nbg_clf = GaussianNB()
-    nbg_clf.fit(train_features, train_classes)
     
     # Prepare test
-    test_indices = indexes[folds[i]].reshape(-1)
+    test_indexes = indexes[folds[i]].reshape(-1)
     test_features = dictionary.obtain_fv(test_indexes,np.array(data.sort_values(['id'])['id']),featuresPath.format(initial_radius,scales,factor_step))
-    test_classes = classes[test_indices]
+    test_classes = classes[test_indexes]
+    print("test shape")
+    print(test_features.shape)
     
     # Evaluate SVM model
     predictions = sgd_clf.predict(test_features)
@@ -200,22 +200,7 @@ for i in range(0, 1):
     matrix_sgd[1,0] += np.sum(predictions[predictions != test_classes] == 0)
     matrix_sgd[1,1] += np.sum(predictions[predictions == test_classes] == 1)
     
-    # Evaluate gnb model
-    predictions = nbg_clf.predict(test_features)
-    results = np.sum(predictions == test_classes)/float(len(predictions))
-    sum_folds_nbg += results
-    
-    matrix_nbg[0,0] += np.sum(predictions[predictions == test_classes] == 0)
-    matrix_nbg[0,1] += np.sum(predictions[predictions != test_classes] == 1)
-    matrix_nbg[1,0] += np.sum(predictions[predictions != test_classes] == 0)
-    matrix_nbg[1,1] += np.sum(predictions[predictions == test_classes] == 1)
-
-
 # In[ ]:
 
-data_results = {'accuracy':sum_folds_svm/num_folds, 'conf_matrix':matrix_svm, 'classifier':'SGD', 'descriptor':total_files[int(sys.argv[1])], 'delta':delta}
-pickle.dump(data_results, gzip.open("results/SGD_balanced_DescriptorFV_delta%f.pklz" % (delta), "wb" ), 2)
-
-data_results = {'accuracy':sum_folds_nbg/num_folds, 'conf_matrix':matrix_nbg, 'classifier':'NB-G', 'descriptor':total_files[int(sys.argv[1])], 'delta':delta}
-pickle.dump(data_results, gzip.open("results/GNB_balanced_DescriptorFV_delta%d.pklz" % (delta), "wb" ), 2)
-
+data_results = {'accuracy':sum_folds_sgd/num_folds, 'conf_matrix':matrix_sgd, 'classifier':'SGD', 'descriptor':'SIFT+FV', 'delta':delta}
+pickle.dump(data_results, gzip.open("results/SGD_balanced_DescriptorFV_delta{:.1f}.pklz".format(delta), "wb" ), 2)
