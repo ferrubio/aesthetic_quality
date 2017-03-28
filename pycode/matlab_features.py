@@ -199,13 +199,13 @@ for i in range(0, num_folds):
 data_results = {'accuracy':sum_folds_svm/num_folds, 'conf_matrix':matrix_svm, 'classifier':'SVM-L', 'descriptor':total_files[int(sys.argv[1])], 'delta':delta}
 if sys.argv[1] == '0':
     data_results['case']=phog_files[int(sys.argv[2])]
-    pickle.dump(data_results, gzip.open("results/SVM_balanced_Descriptor%d_Case%d_Delta%d.pklz" % (int(sys.argv[1]),int(sys.argv[2]),delta), "wb" ), 2)
+    pickle.dump(data_results, gzip.open("results/SVM_balanced_Descriptor{:d}_Case{:d}_Delta{:.1f}.pklz".format(int(sys.argv[1]),int(sys.argv[2]),delta), "wb" ), 2)
 else:
-    pickle.dump(data_results, gzip.open("results/SVM_balanced_Descriptor%d_Delta%d.pklz" % (int(sys.argv[1]),delta), "wb" ), 2)
+    pickle.dump(data_results, gzip.open("results/SVM_balanced_Descriptor{:d}_Delta{:.1f}.pklz".format(int(sys.argv[1]),delta), "wb" ), 2)
 
 data_results = {'accuracy':sum_folds_nbg/num_folds, 'conf_matrix':matrix_nbg, 'classifier':'NB-G', 'descriptor':total_files[int(sys.argv[1])], 'delta':delta}
 if sys.argv[1] == '0':
     data_results['case']=phog_files[int(sys.argv[2])]
-    pickle.dump(data_results, gzip.open("results/GNB_balanced_Descriptor%d_Case%d_Delta%d.pklz" % (int(sys.argv[1]),int(sys.argv[2]),delta), "wb" ), 2)
+    pickle.dump(data_results, gzip.open("results/GNB_balanced_Descriptor{:d}_Case{:d}_Delta{:.1f}.pklz".format(int(sys.argv[1]),int(sys.argv[2]),delta), "wb" ), 2)
 else:
-    pickle.dump(data_results, gzip.open("results/GNB_balanced_Descriptor%d_Delta%d.pklz" % (int(sys.argv[1]),delta), "wb" ), 2)
+    pickle.dump(data_results, gzip.open("results/GNB_balanced_Descriptor{:d}_Delta{:.1f}.pklz".format(int(sys.argv[1]),delta), "wb" ), 2)
