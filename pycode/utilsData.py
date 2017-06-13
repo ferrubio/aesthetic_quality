@@ -10,18 +10,18 @@ def readARFF(path):
     categorical = []
     attributeRegex = re.compile("@attribute\s+(\w+)\s+(\w+|\{.*\})")
     for i in range(len(text)):
-        l = text[i].strip()
+        l = text[i].strip().decode("utf-8") 
         if(len(l)==0 or l[0]=='%'):
             continue
-        if("@relation" in l.lower()):
+        if('@relation' in l.lower()):
             data["name"] = l[10:]
-        elif("@attribute" in l.lower()):
+        elif('@attribute' in l.lower()):
             matches = attributeRegex.match(l).groups()
             if(matches[1][0]=='{'):#categorical
                 categorical.append(True)
                 data["vars"].append(matches[0])
                 # Remove the {}, split by , and remove spaces (strip)
-                domains = {"type":"categorical", "range":map(str.strip,matches[1][1:-1].split(","))}
+                domains = {"type":"categorical", "range":list(map(str.strip,matches[1][1:-1].split(",")))}
                 data["domains"].append(domains)
             else:
                 categorical.append(False)
@@ -29,7 +29,7 @@ def readARFF(path):
                 domains = {"type":matches[1], "range":[]} #We do not know the ranges, so we read the data later and fix it.
                 data["domains"].append(domains)
 
-        elif("@data" in l):
+        elif('@data' in l):
             break
 
     # First we fix the last attribute as the output
@@ -37,12 +37,13 @@ def readARFF(path):
     # Transform the lists into numpy arrays
     data["vars"] = np.array(data["vars"])
     data["domains"] = np.array(data["domains"])
+    
     # Now the @data part
     for i in range(i+1,len(text)):
-        l = text[i].strip().split(',')
+        l = text[i].strip().decode("utf-8").split(',')
         if len(l)!=data["vars"].size:
             continue
-        l = map(str.strip, l)
+        l = list(map(str.strip, l))
         data["data"].append(
             tuple([l[i] if not(categorical[i]) else data["domains"][i]["range"].index(l[i]) for i in range(len(l))]))
     dtype = []
@@ -52,11 +53,19 @@ def readARFF(path):
         else:
             dtype.append((data["vars"][i], np.float))
     data["data"] = np.array(data["data"], dtype = np.dtype(dtype))
+    
     auxDF = pd.DataFrame(data["data"])
-    for i in xrange(len(data["vars"])):
+    for i in range(0,len(data["vars"])):
         minValue = min(auxDF[data["vars"][i]])
         maxValue = max(auxDF[data["vars"][i]])
         data["domains"][i]["range"]=[minValue,maxValue]
+        
+    
+    # this lines are for mi problem, by default the first variable is the id and I only need the data
+    data=pd.DataFrame(data['data'],columns=data['vars'])
+    data=data.rename(columns=(lambda x: 'var'+str(int(x[3:])-1)))
+    data=data.rename(columns={'var0':'id'})
+    
     return data
 
 
@@ -101,4 +110,34 @@ def getDataset(data):
 
     return final_data
 
+
+def balanced_accuracy(y_true, y_pred):
+    y_class = (y_pred >= 0.5).astype(int)
+    TP = np.sum((y_true == y_class) & (y_true == 1))
+    TN = np.sum((y_true == y_class) & (y_true == 0))
+    P = np.sum(y_true == 1)
+    N = np.sum(y_true == 0)
+    return 0.5*(TP/P) + 0.5*(TN/N)
+
+
+def balance_class(classes):
+    
+    classes_uniques = np.unique(classes)
+    min_class = np.array([0,float('Inf')])
+    for i in classes_uniques:
+        aux_value = np.sum(classes == i)
+        if aux_value < min_class[1]:
+            min_class = np.array([i,aux_value])
+
+    final_indexes = np.where(classes == min_class[0])[0]
+    
+    for i in classes_uniques:
+        if i != min_class[0]:
+            aux_indexes = np.where(classes == i)[0]
+            #print np.random.choice(aux_indexes,replace=False,size=min_class[1])
+            final_indexes = np.concatenate((final_indexes,np.random.choice(aux_indexes,replace=False,size=min_class[1])))
+
+    #final_indexes = np.sort(final_indexes)
+
+    return np.sort(final_indexes)
 
