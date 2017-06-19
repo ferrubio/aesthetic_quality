@@ -81,6 +81,7 @@ class Discretize(object):
                 self.cuts_dict[self.index[i]] = [float('-inf'),float('inf')]
             else:
                 self.cuts_dict[self.index[i]] = np.append(np.append(float('-inf'),aux_cuts),float('inf'))
+            print(self.cuts_dict)
                 
                 
     def process(self, dataset):
