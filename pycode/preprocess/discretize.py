@@ -94,7 +94,7 @@ class Discretize(object):
             if i in self.cuts_dict:
                 self._apply_disc(i,disc_dataset[i])
                 disc_dataset[i] = disc_dataset[i].astype(int)
-                disc_dataset[i] = pd.Categorical(disc_dataset[i],disc_dataset[i].unique())
+                disc_dataset[i] = pd.Categorical(disc_dataset[i],range(0,len(self.cuts_dict[i])-1))
                 disc_dataset[i] = disc_dataset[i].cat.rename_categories(self._get_categories(i))
             else:
                 warnings.warn("WARNING: {} variable is not trained, it will be skipped.".format(i))
