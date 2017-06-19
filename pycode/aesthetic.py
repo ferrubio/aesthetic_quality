@@ -36,6 +36,7 @@ index = np.argwhere(features_names=='id')
 features_names = np.delete(features_names, index)
 
 data=pd.merge(data, features, on='id', how='right')
+num_images = data.shape[0]
 
 # to free space
 del features
@@ -86,7 +87,7 @@ for i in range(0, num_folds):
         model = LinearSVC()
         model.fit(data_fold.loc[train_indices,features_names],data_fold['Class'].cat.codes[train_indices])
         
-        predictions =  model.predict_proba(data_fold.loc[test_indices,features_names])
+        predictions =  model.predict(data_fold.loc[test_indices,features_names])
     
     results['balanced'] += utilsData.balanced_accuracy(data_fold['Class'].cat.codes[test_indices], predictions)
     results['AUC'] += roc_auc_score(data_fold['Class'].cat.codes[test_indices], predictions)
