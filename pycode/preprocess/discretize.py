@@ -114,7 +114,7 @@ class Discretize(object):
         aux_cuts = self.cuts_dict[index]
         categories_names = []
         for i in range(0, len(aux_cuts)-2):
-            categories_names.append("({:.6f}, {:.6f}]".format(aux_cuts[i],aux_cuts[i+1]))
-        categories_names.append("({:.6f}, {:.6f})".format(aux_cuts[len(aux_cuts)-2],aux_cuts[len(aux_cuts)-1]))
+            categories_names.append("({:}, {:}]".format(aux_cuts[i],aux_cuts[i+1]))
+        categories_names.append("({:}, {:})".format(aux_cuts[len(aux_cuts)-2],aux_cuts[len(aux_cuts)-1]))
                    
         return categories_names
