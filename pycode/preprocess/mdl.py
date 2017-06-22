@@ -84,7 +84,7 @@ class MDL_method(Discretize):
 
     def getCuts(self,dataset,i):
         num_cases, num_columns = dataset.shape
-        print(self.index[i])
+        
         data_to_cut = dataset.sort_values([self.index[i]]).loc[:,[self.index[i],self.class_index]]
             
         # this variables are for reduce memory in the recursive calls of cutPointsForSubset

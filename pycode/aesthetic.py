@@ -62,16 +62,16 @@ for i in range(0, num_folds):
     
     if selected_model == 'NB':
     
-        discretization = MDL_method()
-        #discretization.frequency = True
-
-        discretization.train(data_aux.loc[train_indices])
+        discretization = Unsupervised_method()
+        discretization.frequency = True
+        discretization.bins = 3
+        discretization.train(data_aux.loc[train_indices]) 
         data_fold = discretization.process(data_aux)
     
         model = Naive_Bayes()
         model.fit(data_fold.loc[train_indices])
     
-        predictions =  model.predict_proba(data_fold.loc[test_indices])[1]
+        predictions =  model.predict_probs(data_fold.loc[test_indices])[1]
     
     elif selected_model == 'NBG':
         data_fold = data_aux.copy()
