@@ -6,22 +6,13 @@ import pandas as pd
 import pickle
 import gzip
 
-# default models from scikit
-from sklearn import svm
-from sklearn.naive_bayes import GaussianNB
-
 # our code (utilsData needs a view)
 import sys
 sys.path.append('pycode/')
 import utilsData
 
-from preprocess.mdl import MDL_method
-from preprocess.unsupervised import Unsupervised_method
-from models.nb import Naive_Bayes
-
-from sklearn.naive_bayes import GaussianNB
-from sklearn.svm import LinearSVC
 from sklearn.metrics import roc_auc_score, accuracy_score
+import full_models
 
 features = utilsData.readARFF(sys.argv[1])
 output_file = sys.argv[2]
@@ -61,37 +52,26 @@ for i in range(0, num_folds):
     test_indices = folds[i]
     
     if selected_model == 'NB':
-    
-        discretization = Unsupervised_method()
-        discretization.frequency = True
-        discretization.bins = 3
-        discretization.train(data_aux.loc[train_indices]) 
-        data_fold = discretization.process(data_aux)
-    
-        model = Naive_Bayes()
-        model.fit(data_fold.loc[train_indices])
-    
-        predictions =  model.predict_probs(data_fold.loc[test_indices])[1]
+        predictions = full_models.fullNB(data_aux, train_indices, test_indices)
+        
+    elif selected_model == 'AODE':
+        predictions = full_models.fullAODE(data_aux, train_indices, test_indices)
     
     elif selected_model == 'NBG':
-        data_fold = data_aux.copy()
-    
-        model = GaussianNB()
-        model.fit(data_fold.loc[train_indices,features_names],data_fold['Class'].cat.codes[train_indices])
-        
-        predictions =  model.predict_proba(data_fold.loc[test_indices,features_names])[:,1]
+        predictions = full_models.fullNBG(data_aux, train_indices, test_indices, features_names, 'Class')
     
     elif selected_model == 'SVM':
-        data_fold = data_aux.copy()
-    
-        model = LinearSVC()
-        model.fit(data_fold.loc[train_indices,features_names],data_fold['Class'].cat.codes[train_indices])
+        predictions = full_models.fullSVM(data_aux, train_indices, test_indices, features_names, 'Class')
         
-        predictions =  model.predict(data_fold.loc[test_indices,features_names])
-    
-    results['balanced'] += utilsData.balanced_accuracy(data_fold['Class'].cat.codes[test_indices], predictions)
-    results['AUC'] += roc_auc_score(data_fold['Class'].cat.codes[test_indices], predictions)
-    results['accuracy'] += accuracy_score(data_fold['Class'].cat.codes[test_indices], (predictions >= 0.5).astype(int))
+    elif selected_model == 'ELM':
+        predictions = full_models.fullELM(data_aux, train_indices, test_indices, features_names, 'Class')
+        
+    elif selected_model == 'GBoost':
+        predictions = full_models.fullGBoost(data_aux, train_indices, test_indices, features_names, 'Class')
+   
+    results['balanced'] += utilsData.balanced_accuracy(data_aux['Class'].cat.codes[test_indices], predictions)
+    results['AUC'] += roc_auc_score(data_aux['Class'].cat.codes[test_indices], predictions)
+    results['accuracy'] += accuracy_score(data_aux['Class'].cat.codes[test_indices], (predictions >= 0.5).astype(int))
     
 results['balanced'] /= num_folds
 results['AUC'] /= num_folds
