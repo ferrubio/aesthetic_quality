@@ -13,6 +13,7 @@ import utilsData
 
 from sklearn.metrics import roc_auc_score, accuracy_score
 import full_models
+from preprocess import utilities
 
 features_file = sys.argv[1]
 output_file = sys.argv[2]
@@ -57,7 +58,7 @@ results['accuracy']=0
 for i in range(0, num_folds):
     
     train_indices = np.delete(folds,i,axis=0).reshape(-1)
-    train_indices = train_indices[utilsData.balance_class(data_aux['Class'].cat.codes[train_indices])]
+    train_indices = train_indices[utilities.balance_class(data_aux['Class'].cat.codes[train_indices])]
     
     test_indices = folds[i]
     
