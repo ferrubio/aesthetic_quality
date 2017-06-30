@@ -74,6 +74,48 @@ def caffenet(data, label=None, train=True, num_classes=1000,
         f.write((str(n.to_proto())).encode())
         return f.name
     
+def caffenet_aes(data, label=None, train=True, num_classes=1000,
+             classifier_name='fc8', learn_all=False):
+    """Returns a NetSpec specifying CaffeNet, following the original proto text
+       specification (./models/bvlc_reference_caffenet/train_val.prototxt)."""
+    n = caffe.NetSpec()
+    n.data = data
+    param = learned_param if learn_all else frozen_param
+    n.conv1, n.relu1 = conv_relu(n.data, 11, 96, stride=4, param=param)
+    n.pool1 = max_pool(n.relu1, 3, stride=2)
+    n.norm1 = L.LRN(n.pool1, local_size=5, alpha=1e-4, beta=0.75)
+    n.conv2, n.relu2 = conv_relu(n.norm1, 5, 256, pad=2, group=2, param=param)
+    n.pool2 = max_pool(n.relu2, 3, stride=2)
+    n.norm2 = L.LRN(n.pool2, local_size=5, alpha=1e-4, beta=0.75)
+    n.conv3, n.relu3 = conv_relu(n.norm2, 3, 384, pad=1, param=param)
+    n.conv4, n.relu4 = conv_relu(n.relu3, 3, 384, pad=1, group=2, param=param)
+    n.conv5, n.relu5 = conv_relu(n.relu4, 3, 256, pad=1, group=2, param=param)
+    n.pool5 = max_pool(n.relu5, 3, stride=2)
+    n.fc6_aes, n.relu6_aes = fc_relu(n.pool5, 1000, param=learned_param)
+    if train:
+        n.drop6_aes = fc7input_aes = L.Dropout(n.relu6_aes, in_place=True)
+    else:
+        fc7input_aes = n.relu6_aes
+    n.fc7_aes, n.relu7_aes = fc_relu(fc7input_aes, 1000, param=learned_param)
+    if train:
+        n.drop7_aes = fc8input = L.Dropout(n.relu7_aes, in_place=True)
+    else:
+        fc8input = n.relu7_aes
+    # always learn fc8 (param=learned_param)
+    fc8 = L.InnerProduct(fc8input, num_output=num_classes, param=learned_param)
+    # give fc8 the name specified by argument `classifier_name`
+    n.__setattr__(classifier_name, fc8)
+    if not train:
+        n.probs = L.Softmax(fc8)
+    if label is not None:
+        n.label = label
+        n.loss = L.SoftmaxWithLoss(fc8, n.label)
+        n.acc = L.Accuracy(fc8, n.label)
+    # write the net to a temporary file and return its filename
+    with tempfile.NamedTemporaryFile(delete=False) as f:
+        f.write((str(n.to_proto())).encode())
+        return f.name
+    
 def style_net(train=True, learn_all=False, subset=None):
     if subset is None:
         subset = 'train' if train else 'test'
@@ -92,7 +134,7 @@ def style_net(train=True, learn_all=False, subset=None):
                     classifier_name='fc8_flickr',
                     learn_all=learn_all)
 
-def aest_net(train=True, learn_all=False, subset=None):
+def aest_net(train=True, learn_all=False, subset=None, caffe_aes=False):
     if subset is None:
         subset = 'train' if train else 'test'
     
@@ -104,11 +146,14 @@ def aest_net(train=True, learn_all=False, subset=None):
     style_data, style_label = L.ImageData(
         transform_param=transform_param, source=source,
         batch_size=50, new_height=256, new_width=256, ntop=2)
+    if caffe_aes:
+        return caffenet_aes(data=style_data, label=style_label, train=train,num_classes=2,classifier_name='fc8_aesthetic', learn_all=learn_all)
     return caffenet(data=style_data, label=style_label, train=train,
                     num_classes=2,
                     classifier_name='fc8_aesthetic',
                     learn_all=learn_all)
 
+    
 def solver(train_net_path, test_net_path=None, base_lr=0.001):
     s = caffe_pb2.SolverParameter()
 
@@ -153,7 +198,7 @@ def solver(train_net_path, test_net_path=None, base_lr=0.001):
     # Snapshots are files used to store networks we've trained.  Here, we'll
     # snapshot every 10K iterations -- ten times during training.
     s.snapshot = 10000
-    s.snapshot_prefix = '/home/frubio/AVA/finetune_flickr_style'
+    s.snapshot_prefix = '/home/frubio/AVA/aesthetic_snapshot'
     
     # Train on the GPU.  Using the CPU to train large networks is very slow.
     s.solver_mode = caffe_pb2.SolverParameter.GPU
@@ -163,7 +208,7 @@ def solver(train_net_path, test_net_path=None, base_lr=0.001):
         f.write((str(s)).encode())
         return f.name
     
-def run_solvers(niter, solvers, disp_interval=10):
+def run_solvers(niter, solvers, disp_interval=1000):
     """Run solvers for niter iterations,
        returning the loss and accuracy recorded each iteration.
        `solvers` is a list of (name, solver) tuples."""
