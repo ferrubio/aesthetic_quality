@@ -46,6 +46,10 @@ del features
 data_aux = data[np.append(features_names,['Class'])]
 data_aux['Class'] = pd.Categorical(data_aux['Class'],range(0,len(data_aux['Class'].unique())))
 
+#to free space
+del data
+
+
 np.random.seed(1000)
 num_folds = 5
 folds = np.random.choice(range(0,num_images),replace=False,size=(num_folds,int(num_images/num_folds)))
