@@ -29,7 +29,7 @@ from preprocess import utilities
 caffe.set_device(0)  # if we have multiple GPUs, pick the first one
 weights = caffe_root + 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
 
-niter = 10  # number of iterations to train
+niter = 100000  # number of iterations to train
 
 # Reset style_solver as before.
 style_solver_filename = aestheticNet.solver(aestheticNet.aest_net(train=True,caffe_aes=True))
