@@ -15,16 +15,21 @@ from sklearn.metrics import roc_auc_score, accuracy_score
 import full_models
 from preprocess import utilities
 
+import sqlite3
+
 features_file = sys.argv[1]
 output_file = sys.argv[2]
 selected_model = sys.argv[3]
 decaf_discrete = sys.argv[4]
 
-
 if features_file[-4:] == 'pklz':
     features = pickle.load(open(features_file,'rb',2))
 else:
     features = utilsData.readARFF(features_file)
+    
+features['id'] = features['id'].astype(int)
+#for test in notebooks
+#features = features.iloc[:,-101:]
 
 # we take the name of the features and delete de ID
 features_names = np.array(features.columns)
@@ -32,21 +37,20 @@ index = np.argwhere(features_names=='id')
 features_names = np.delete(features_names, index)
 
 # this line is for normalize decaf features
-if (decaf_discrete=='True'):
+if (decaf_discrete == 'True'):
     features[features_names],_ = utilities.reference_forward_implementation(np.array(features[features_names]),5,2,1.5,0.75)
 
 data = pickle.load(gzip.open('packages/AVA_info.pklz','rb',2))
+data = data.merge(features, on='id', copy=False)
 
-data=pd.merge(data, features, on='id', how='right')
-num_images = data.shape[0]
-
-# to free space
 del features
+
+num_images = data.shape[0]
 
 data_aux = data[np.append(features_names,['Class'])]
 data_aux['Class'] = pd.Categorical(data_aux['Class'],range(0,len(data_aux['Class'].unique())))
 
-#to free space
+# and free space
 del data
 
 

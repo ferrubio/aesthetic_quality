@@ -13,9 +13,9 @@ from sklearn.ensemble import GradientBoostingClassifier
 
 
 def fullNB(data_aux, train_indices, test_indices):
-    discretization = Unsupervised_method()
-    discretization.frequency = True
-    discretization.bins = 5
+    discretization = MDL_method()
+    # discretization.frequency = True
+    # discretization.bins = 5
     discretization.train(data_aux.loc[train_indices])
     data_fold = discretization.process(data_aux)
 
