@@ -2,7 +2,7 @@
 from preprocess.mdl import MDL_method
 from preprocess.unsupervised import Unsupervised_method
 from models.nb import Naive_Bayes
-from models.aode import AODE
+from models.aode_fast import AODE_fast
 
 # default models from scikit
 from sklearn.naive_bayes import GaussianNB
@@ -32,7 +32,7 @@ def fullAODE(data_aux, train_indices, test_indices):
     discretization.train(data_aux.loc[train_indices])
     data_fold = discretization.process(data_aux)
 
-    model = AODE()
+    model = AODE_fast()
     model.fit(data_fold.loc[train_indices])
 
     return model.predict_probs(data_fold.loc[test_indices])[:,1]

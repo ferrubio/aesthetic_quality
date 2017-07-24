@@ -83,6 +83,9 @@ class Naive_Bayes():
         '''
         
         class_categories = self.variables_dict[self.class_index]
+        counters = dataset.groupby([self.class_index])[self.class_index].count()
+        self.classes_count = np.array(counters)
+        
         for idi, i in enumerate(self.features_name):
             counters = dataset.groupby([i,self.class_index])[self.class_index].count()
             feature_categories = self.variables_dict[i]
@@ -90,7 +93,6 @@ class Naive_Bayes():
                 for idk, k in enumerate(class_categories):
                     if (j,k) in counters:
                         self.features_count[idk,idj+self.features_index[idi]] += counters[(j,k)]
-                        self.classes_count[idk] += counters[(j,k)]
         
         # For the alpha
         self.features_count+=self.alpha
