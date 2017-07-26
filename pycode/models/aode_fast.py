@@ -59,20 +59,6 @@ class AODE_fast():
         else:
             self._check_dataset(dataset)
 
-        '''
-        aux_dataset = self._transform_data_to_codes(dataset)
-                            
-        for idx, i in aux_dataset.iterrows():
-            y=np.array(i[self.class_index],dtype=np.int)
-            X=np.array(i[self.features_name],dtype=np.int)
-
-            weight=1.0
-
-            self.classes_count[y]+=weight
-            self.frequencies[X+self.features_index1]+=weight
-            newIndex=np.array(list(map(lambda x:x+self.features_index1+X, self.features_index2+X*self.features_values))[:]).ravel()
-            self.features_count[y,newIndex] += weight
-        ''' 
         class_categories = self.variables_dict[self.class_index]
         counters = dataset.groupby([self.class_index])[self.class_index].count()
         self.classes_count = np.array(counters)
@@ -107,47 +93,39 @@ class AODE_fast():
         
         aux_dataset = self._transform_data_to_codes(dataset)
         
-        for idx, case in aux_dataset.iterrows():
+        
+        # Non iterative version
+        attIndex = np.array(aux_dataset[self.features_name]) + self.features_index1
+        for i in range(0,self.class_values):
+            init_spodeP = False
+            boolean_vector_aux=np.ones(len(self.features_index1), dtype=bool)
+            for j in range(0,len(self.features_index1)):
+                parents=attIndex[:,j]
+                
+                #if(self.frequencies[parent]<self.freq_limit):
+                #    continue
 
-            if np.isnan(case[self.features_name]).any():
-                counter+=1
-                continue
+                values_start_aux=self.features_values*parents
+                countsForParents=np.array([self.features_count[i][x:x+self.features_values] for x in values_start_aux])
+                boolean_vector_aux[j]=False
 
-            X=case[self.features_name].astype(int)
-            attIndex=X+self.features_index1
+                classparentfreq = np.array([countsForParents[idx, x] for idx, x in enumerate(parents)])
+                spodeP = np.log((classparentfreq + 1.0)/(np.sum(self.classes_count) + self.class_values * \
+                                                         len(self.variables_dict[self.features_name[j]])))
+                
+                spodeP += np.sum(np.log(( np.array([countsForParents[idx,x] for idx, x in enumerate(attIndex[:,boolean_vector_aux])])
+                                         +1.0)/
+                                        (np.array([self.features_value_vector[boolean_vector_aux]+x for x in classparentfreq]))),
+                                 axis=1)
+                
+                if not(init_spodeP):
+                    probs[:, i] = spodeP
+                    init_spodeP = True
+                else:
+                    probs[:, i] = np.logaddexp(spodeP, probs[:, i])
 
-            for i in range(0,self.class_values):
-                boolean_vector_aux=np.ones(len(self.features_index1), dtype=bool)
-                for j in range(0,len(self.features_index1)):
-                    parent=attIndex[j]
-                    if(self.frequencies[parent]<self.freq_limit):
-                        continue
-
-                    values_start_aux=self.features_values*parent
-                    countsForParent=self.features_count[i][values_start_aux:values_start_aux+self.features_values]
-
-                    boolean_vector_aux[j]=False
-
-                    classparentfreq = countsForParent[parent]
-
-                    # spodeP = (classparentfreq + 1.0)/(np.sum(self.classes_count) + self.class_values * len(dataset.domains[j]['range']))
-                    # spodeP *= np.prod((countsForParent[attIndex[boolean_vector_aux]]+1.0)/(classparentfreq+self.features_value_vector[boolean_vector_aux]))
-                    # probs[counter,i] += spodeP
-
-                    spodeP = np.log((classparentfreq + 1.0)/(np.sum(self.classes_count) + self.class_values * \
-                                                             len(self.variables_dict[self.features_name[j]])))
-                    spodeP += np.sum(np.log((countsForParent[attIndex[boolean_vector_aux]]+1.0)/\
-                                           (classparentfreq+self.features_value_vector[boolean_vector_aux])))
-
-                    if probs[counter, i] == 0:
-                        probs[counter, i] = spodeP
-                    else:
-                        probs[counter, i] = np.logaddexp(spodeP, probs[counter, i])
-
-                    boolean_vector_aux[j] = True
-            counter += 1
-
-
+                boolean_vector_aux[j] = True
+        
         return np.array(probs,dtype=np.float)
 
     def predict_probs(self, dataset):
