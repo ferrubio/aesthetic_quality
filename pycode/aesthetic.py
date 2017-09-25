@@ -23,7 +23,7 @@ selected_model = sys.argv[3]
 decaf_discrete = sys.argv[4]
 
 if features_file[-4:] == 'pklz':
-    features = pickle.load(open(features_file,'rb',2))
+    features = pickle.load(open(features_file,'rb',pickle.HIGHEST_PROTOCOL))
 else:
     features = utilsData.readARFF(features_file)
     

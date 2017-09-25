@@ -100,7 +100,6 @@ try:
 except Exception as e:
     print('Unable to save data to', 'total_fc6.pklz', ':', e)
     
-
 decaf_features = extract_decaf_features(images_root,list_images,'fc7_aes',net,transformer)
 try:
     with open('total_fc7_AesNet.pklz', 'wb') as f:
