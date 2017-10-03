@@ -27,8 +27,8 @@ from preprocess import utilities
 
 caffe.set_device(0)
 
-model_def = aestheticNet.aest_net(train=False,caffe_aes=True)
-model_weights = "/home/frubio/AVA/aesthetic_finetuning.caffemodel"
+model_def = aestheticNet.caffenet_aes_test()
+model_weights = "models/AesNet_CaffeNet.caffemodel"
 
 net = caffe.Net(model_def,      # defines the structure of the model
                 model_weights,  # contains the trained weights
@@ -95,16 +95,16 @@ except Exception as e:
 '''
 decaf_features = extract_decaf_features(images_root,list_images,'fc6_aes',net,transformer)
 try:
-    with open('total_fc6_AesNet.pklz', 'wb') as f:
+    with open('AesNet_CaffeNet_fc6.pklz', 'wb') as f:
         pickle.dump(decaf_features, f, pickle.HIGHEST_PROTOCOL)
 except Exception as e:
-    print('Unable to save data to', 'total_fc6.pklz', ':', e)
+    print('Unable to save data to', 'AesNet_CaffeNet_fc6.pklz', ':', e)
     
 decaf_features = extract_decaf_features(images_root,list_images,'fc7_aes',net,transformer)
 try:
-    with open('total_fc7_AesNet.pklz', 'wb') as f:
+    with open('AesNet_CaffeNet_fc7.pklz', 'wb') as f:
         pickle.dump(decaf_features, f, pickle.HIGHEST_PROTOCOL)
 except Exception as e:
-    print('Unable to save data to', 'total_fc7.pklz', ':', e)
+    print('Unable to save data to', 'AesNet_CaffeNet_fc7.pklz', ':', e)
 
 

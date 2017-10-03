@@ -194,8 +194,8 @@ def caffenet_style_net(train=True, learn_all=False, subset=None):
                     num_classes=NUM_STYLE_LABELS,
                     classifier_name='fc8_flickr',
                     learn_all=learn_all)
-
-def caffenet_aes_net(train=True, learn_all=False, subset=None, caffe_aes=False, source_path=''):
+    
+def caffenet_aes_net(train=True, learn_all=False, subset=None, source_path=''):
     if subset is None:
         subset = 'train' if train else 'test'
     
@@ -207,13 +207,20 @@ def caffenet_aes_net(train=True, learn_all=False, subset=None, caffe_aes=False, 
     style_data, style_label = L.ImageData(
         transform_param=transform_param, source=source,
         batch_size=50, new_height=256, new_width=256, ntop=2)
-    if caffe_aes:
-        return caffenet_aes(data=style_data, label=style_label, train=train,num_classes=2,classifier_name='fc8_aesthetic', learn_all=learn_all)
-    return caffenet(data=style_data, label=style_label, train=train,
-                    num_classes=2,
-                    classifier_name='fc8_aesthetic',
-                    learn_all=learn_all)
+    
+    return caffenet_aes(data=style_data, label=style_label, train=train,num_classes=2,classifier_name='fc8_aesthetic', learn_all=learn_all)
 
+
+def caffenet_aes_test():
+    caffe_root = '/opt/caffe/'
+    aes_data = L.Input(input_param=dict(shape=dict(dim=[10, 3, 227, 227])))
+    return caffenet_aes(data=aes_data, 
+                        label=None, 
+                        train=False,
+                        num_classes=2,
+                        classifier_name='fc8_aesthetic', 
+                        learn_all=False)
+    
 def VGG16_aes_net(train=True, learn_all=False, subset=None, source_path=''):
     if subset is None:
         subset = 'train' if train else 'test'
@@ -234,6 +241,15 @@ def VGG16_aes_net(train=True, learn_all=False, subset=None, source_path=''):
                      learn_all=learn_all)
     
 
+def VGG16_aes_test():
+    caffe_root = '/opt/caffe/'
+    aes_data = L.Input(input_param=dict(shape=dict(dim=[10, 3, 224, 224])))
+    return VGG16_aes(data=aes_data, 
+                        label=None, 
+                        train=False,
+                        num_classes=2,
+                        classifier_name='fc8_aesthetic', 
+                        learn_all=False)
     
 def solver(train_net_path, test_net_path=None, base_lr=0.001, snapshot_pref=''):
     s = caffe_pb2.SolverParameter()

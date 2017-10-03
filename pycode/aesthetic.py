@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 
 # for store the results
-import pickle
+from six.moves import cPickle as pickle
 import gzip
 
 # our code (utilsData needs a view)
