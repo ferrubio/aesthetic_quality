@@ -51,8 +51,8 @@ data_aux['Class'] = pd.Categorical(data_aux['Class'],range(0,len(data_aux['Class
 # and free space
 del data
 
-train_indices = pickle.load(gzip.open('../models/train_indexes_AesNet.pklz','rb',2))
-test_indices = pickle.load(gzip.open('../models/test_indexes_AesNet.pklz','rb',2))
+train_indices = pickle.load(gzip.open('models/train_indexes_AesNet.pklz','rb',2))
+test_indices = pickle.load(gzip.open('models/test_indexes_AesNet.pklz','rb',2))
 
 if selected_model == 'NB':
     predictions = full_models.fullNB(data_aux, train_indices, test_indices)
