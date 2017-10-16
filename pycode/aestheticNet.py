@@ -176,24 +176,30 @@ def VGG16_aes(data, label=None, train=True, num_classes=1000,
     with tempfile.NamedTemporaryFile(delete=False) as f:
         f.write((str(n.to_proto())).encode())
         return f.name
-
-def caffenet_style_net(train=True, learn_all=False, subset=None):
+    
+def caffenet_only1aes_net(train=True, learn_all=False, subset=None, source_path=''):
     if subset is None:
         subset = 'train' if train else 'test'
         
+    source = source_path % subset
     caffe_root = '/opt/caffe/'
-    NUM_STYLE_LABELS = 5
-    source = 'models/flickr_style/%s.txt' % subset
     
     transform_param = dict(mirror=train, crop_size=227,
         mean_file=caffe_root + 'data/ilsvrc12/imagenet_mean.binaryproto')
     style_data, style_label = L.ImageData(
         transform_param=transform_param, source=source,
-        batch_size=50, new_height=256, new_width=256, ntop=2)
-    return caffenet(data=style_data, label=style_label, train=train,
-                    num_classes=NUM_STYLE_LABELS,
-                    classifier_name='fc8_flickr',
-                    learn_all=learn_all)
+        batch_size=128, new_height=256, new_width=256, ntop=2)
+    return caffenet(data=style_data, label=style_label, train=train,num_classes=2,classifier_name='fc8_aesthetic', learn_all=learn_all)
+
+def caffenet_only1aes_test():
+    caffe_root = '/opt/caffe/'
+    aes_data = L.Input(input_param=dict(shape=dict(dim=[100, 3, 227, 227])))
+    return caffenet(data=aes_data, 
+                        label=None, 
+                        train=False,
+                        num_classes=2,
+                        classifier_name='fc8_aesthetic', 
+                        learn_all=False)
     
 def caffenet_aes_net(train=True, learn_all=False, subset=None, source_path=''):
     if subset is None:
@@ -202,18 +208,18 @@ def caffenet_aes_net(train=True, learn_all=False, subset=None, source_path=''):
     source = source_path % subset
     caffe_root = '/opt/caffe/'
     
-    transform_param = dict(mirror=train, crop_size=224,
+    transform_param = dict(mirror=train, crop_size=227,
         mean_file=caffe_root + 'data/ilsvrc12/imagenet_mean.binaryproto')
     style_data, style_label = L.ImageData(
         transform_param=transform_param, source=source,
-        batch_size=50, new_height=256, new_width=256, ntop=2)
+        batch_size=128, new_height=256, new_width=256, ntop=2)
     
     return caffenet_aes(data=style_data, label=style_label, train=train,num_classes=2,classifier_name='fc8_aesthetic', learn_all=learn_all)
 
 
 def caffenet_aes_test():
     caffe_root = '/opt/caffe/'
-    aes_data = L.Input(input_param=dict(shape=dict(dim=[10, 3, 227, 227])))
+    aes_data = L.Input(input_param=dict(shape=dict(dim=[100, 3, 227, 227])))
     return caffenet_aes(data=aes_data, 
                         label=None, 
                         train=False,
@@ -232,7 +238,7 @@ def VGG16_aes_net(train=True, learn_all=False, subset=None, source_path=''):
         mean_file=caffe_root + 'data/ilsvrc12/imagenet_mean.binaryproto')
     style_data, style_label = L.ImageData(
         transform_param=transform_param, source=source,
-        batch_size=50, new_height=256, new_width=256, ntop=2)
+        batch_size=256, new_height=256, new_width=256, ntop=2)
     return VGG16_aes(data=style_data, 
                      label=style_label, 
                      train=train,
@@ -243,7 +249,7 @@ def VGG16_aes_net(train=True, learn_all=False, subset=None, source_path=''):
 
 def VGG16_aes_test():
     caffe_root = '/opt/caffe/'
-    aes_data = L.Input(input_param=dict(shape=dict(dim=[10, 3, 224, 224])))
+    aes_data = L.Input(input_param=dict(shape=dict(dim=[100, 3, 224, 224])))
     return VGG16_aes(data=aes_data, 
                         label=None, 
                         train=False,
@@ -280,7 +286,7 @@ def solver(train_net_path, test_net_path=None, base_lr=0.001, snapshot_pref=''):
     # every `stepsize` iterations.
     s.lr_policy = 'step'
     s.gamma = 0.1
-    s.stepsize = 3000
+    s.stepsize = 30000
 
     # Set other SGD hyperparameters. Setting a non-zero `momentum` takes a
     # weighted average of the current gradient and previous gradients to make
@@ -290,11 +296,11 @@ def solver(train_net_path, test_net_path=None, base_lr=0.001, snapshot_pref=''):
     s.weight_decay = 5e-4
 
     # Display the current training loss and accuracy every 1000 iterations.
-    s.display = 500
+    s.display = 100
 
     # Snapshots are files used to store networks we've trained.  Here, we'll
     # snapshot every 10K iterations -- ten times during training.
-    s.snapshot = 500
+    s.snapshot = 10000
     s.snapshot_prefix = snapshot_pref
     
     # Train on the GPU.  Using the CPU to train large networks is very slow.

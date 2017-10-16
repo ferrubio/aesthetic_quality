@@ -26,15 +26,16 @@ import aestheticNet
 from preprocess import utilities 
 
 caffe.set_device(0)  # if we have multiple GPUs, pick the first one
-weights = caffe_root + 'models/VGG-16/VGG_ILSVRC_16_layers.caffemodel'
-#weights = caffe_root + 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
+#weights = caffe_root + 'models/VGG-16/VGG_ILSVRC_16_layers.caffemodel'
+weights = caffe_root + 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
 
-niter = 10000  # number of iterations to train
+niter = 100000  # number of iterations to train
 
 # Reset style_solver as before.
-style_solver_filename = aestheticNet.solver(aestheticNet.VGG16_aes_net(train=True,
+style_solver_filename = aestheticNet.solver(aestheticNet.caffenet_only1aes_net(train=True,
                                                                        source_path='models/%s_partition_finetuning.txt'),
-                                           snapshot_pref = 'models/VGG16_AesNet')
+                                           snapshot_pref = 'models/CaffeNet_only1Aes',
+                                           base_lr=0.001)
 style_solver = caffe.get_solver(style_solver_filename)
 style_solver.net.copy_from(weights)
 
@@ -50,4 +51,4 @@ style_weights = weights['pretrained']
 # Delete solvers to save memory.
 del style_solver, solvers
 
-os.rename(weights['pretrained'], "models/AesNet_VGG16.caffemodel")
+os.rename(weights['pretrained'], "models/AesNet_CaffeNet_only1.caffemodel")
