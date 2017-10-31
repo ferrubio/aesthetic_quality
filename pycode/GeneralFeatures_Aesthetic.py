@@ -15,8 +15,6 @@ from sklearn.metrics import roc_auc_score, accuracy_score
 import full_models
 from preprocess import utilities
 
-import sqlite3
-
 features_file = sys.argv[1]
 output_file = sys.argv[2]
 selected_model = sys.argv[3]

@@ -24,7 +24,7 @@ from caffe import layers as L
 from PIL import ImageFile
 ImageFile.LOAD_TRUNCATED_IMAGES = True
 
-import aestheticNet
+import AesNet
 from preprocess import utilities 
 
 import utilsData
@@ -35,20 +35,18 @@ data.loc[:,'id'] = data['id'].apply(str)
 data.sort_values(['id'],inplace=True)
 data.reset_index(inplace=True,drop=True)
 
-test_cases = data.loc[pickle.load(gzip.open( "models/test_indexes_AesNet.pklz", "rb" , 2))]
-#test_cases = data.loc[pickle.load(gzip.open( "models/test_indexes_AesNet_standard_AVA.pklz", "rb" , 2))]
+#test_cases = data.loc[pickle.load(gzip.open( "models/test_indexes_AesNet.pklz", "rb" , 2))]
+test_cases = data.loc[pickle.load(gzip.open( "models/test_indexes_AesNet_standard_AVA.pklz", "rb" , 2))]
 test_files = np.array(['/home/frubio/AVA/AVADataset/{:}.jpg'.format(i) for i in test_cases['id']])
 test_classes = np.array(test_cases['Class'])
 
 
-#value_list = [10000,20000,30000,40000,50000,60000,70000,80000]
-value_list = [10000]
+value_list = [30000,40000,50000]
 
 for iter_value in value_list:
-    model_def = aestheticNet.caffenet_only1aes_test()
-    #model_def = aestheticNet.caffenet_aes_test()
-    #model_weights = "models/CaffeNet_only1Aes_iter_{:}.caffemodel".format(iter_value)
-    model_weights = "models/AesNet_CaffeNet_only1.caffemodel"
+    model_def = AesNet.AesNet_CaffeNet(train=False, fc_nodes=4096)
+    model_weights = "models/CaffeNet_only1Aes_standard_AVA_iter_{:}.caffemodel".format(iter_value)
+    #model_weights = "models/AesNet_CaffeNet.caffemodel"
     
     net = caffe.Net(model_def,      # defines the structure of the model
                     model_weights,  # contains the trained weights
@@ -95,4 +93,4 @@ for iter_value in value_list:
     results['AUC'] = roc_auc_score(test_classes, output_prob)
     results['accuracy'] = accuracy_score(test_classes, (output_prob >= 0.5).astype(int))
 
-    pickle.dump(results, gzip.open( "results/AesNet_CaffeNet_only1.pklz".format(iter_value), "wb" ), 2)
+    pickle.dump(results, gzip.open( "results/CaffeNet_only1Aes_standard_AVA_iter_{:}.pklz".format(iter_value), "wb" ), 2)

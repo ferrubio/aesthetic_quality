@@ -16,7 +16,7 @@ mainPath='/home/frubio/AVA/'
 featuresPath = "/home/frubio/python/aesthetic_quality/features/dSIFT/initialRad{:d}_scales{:d}_factor{:.1f}/AVA/"
 
 sys.path.insert(0,'pycode')
-import fisher_vector
+from third_party import fisher_vector
 from sklearn import svm
 from sklearn.decomposition import PCA
 from sklearn.naive_bayes import GaussianNB

@@ -74,48 +74,6 @@ def caffenet(data, label=None, train=True, num_classes=1000,
         f.write((str(n.to_proto())).encode())
         return f.name
     
-def caffenet_aes(data, label=None, train=True, num_classes=1000,
-             classifier_name='fc8', learn_all=False):
-    """Returns a NetSpec specifying CaffeNet, following the original proto text
-       specification (./models/bvlc_reference_caffenet/train_val.prototxt)."""
-    n = caffe.NetSpec()
-    n.data = data
-    param = learned_param if learn_all else frozen_param
-    n.conv1, n.relu1 = conv_relu(n.data, 11, 96, stride=4, param=param)
-    n.pool1 = max_pool(n.relu1, 3, stride=2)
-    n.norm1 = L.LRN(n.pool1, local_size=5, alpha=1e-4, beta=0.75)
-    n.conv2, n.relu2 = conv_relu(n.norm1, 5, 256, pad=2, group=2, param=param)
-    n.pool2 = max_pool(n.relu2, 3, stride=2)
-    n.norm2 = L.LRN(n.pool2, local_size=5, alpha=1e-4, beta=0.75)
-    n.conv3, n.relu3 = conv_relu(n.norm2, 3, 384, pad=1, param=param)
-    n.conv4, n.relu4 = conv_relu(n.relu3, 3, 384, pad=1, group=2, param=param)
-    n.conv5, n.relu5 = conv_relu(n.relu4, 3, 256, pad=1, group=2, param=param)
-    n.pool5 = max_pool(n.relu5, 3, stride=2)
-    n.fc6_aes, n.relu6_aes = fc_relu(n.pool5, 1000, param=learned_param)
-    if train:
-        n.drop6_aes = fc7input_aes = L.Dropout(n.relu6_aes, in_place=True)
-    else:
-        fc7input_aes = n.relu6_aes
-    n.fc7_aes, n.relu7_aes = fc_relu(fc7input_aes, 1000, param=learned_param)
-    if train:
-        n.drop7_aes = fc8input = L.Dropout(n.relu7_aes, in_place=True)
-    else:
-        fc8input = n.relu7_aes
-    # always learn fc8 (param=learned_param)
-    fc8 = L.InnerProduct(fc8input, num_output=num_classes, param=learned_param)
-    # give fc8 the name specified by argument `classifier_name`
-    n.__setattr__(classifier_name, fc8)
-    if not train:
-        n.probs = L.Softmax(fc8)
-    if label is not None:
-        n.label = label
-        n.loss = L.SoftmaxWithLoss(fc8, n.label)
-        n.acc = L.Accuracy(fc8, n.label)
-    # write the net to a temporary file and return its filename
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-        f.write((str(n.to_proto())).encode())
-        return f.name
-    
 def VGG16(data, label=None, train=True, num_classes=1000,
              classifier_name='fc8', learn_all=False):
     """Returns a NetSpec specifying VGG-16, following the original proto text
@@ -177,68 +135,8 @@ def VGG16(data, label=None, train=True, num_classes=1000,
         f.write((str(n.to_proto())).encode())
         return f.name
     
-def VGG16_aes(data, label=None, train=True, num_classes=1000,
-             classifier_name='fc8', learn_all=False):
-    """Returns a NetSpec specifying VGG-16, following the original proto text
-       specification (./models/bvlc_reference_caffenet/train_val.prototxt)."""
-    n = caffe.NetSpec()
-    n.data = data
-    param = learned_param if learn_all else frozen_param
     
-    n.conv1_1, n.relu1_1 = conv_relu(n.data, 3, 64, pad=1, param=param)
-    n.conv1_2, n.relu1_2 = conv_relu(n.relu1_1, 3, 64, pad=1, param=param)
-    
-    n.pool1 = max_pool(n.relu1_2, 2, stride=2)
-    
-    n.conv2_1, n.relu2_1 = conv_relu(n.pool1, 3, 128, pad=1, param=param)
-    n.conv2_2, n.relu2_2 = conv_relu(n.relu2_1, 3, 128, pad=1, param=param)
-    
-    n.pool2 = max_pool(n.relu2_2, 2, stride=2)
-    
-    n.conv3_1, n.relu3_1 = conv_relu(n.pool2, 3, 256, pad=1, param=param)
-    n.conv3_2, n.relu3_2 = conv_relu(n.relu3_1, 3, 256, pad=1, param=param)
-    n.conv3_3, n.relu3_3 = conv_relu(n.relu3_2, 3, 256, pad=1, param=param)
-    
-    n.pool3 = max_pool(n.relu3_3, 2, stride=2)
-    
-    n.conv4_1, n.relu4_1 = conv_relu(n.pool3, 3, 512, pad=1, param=param)
-    n.conv4_2, n.relu4_2 = conv_relu(n.relu4_1, 3, 512, pad=1, param=param)
-    n.conv4_3, n.relu4_3 = conv_relu(n.relu4_2, 3, 512, pad=1, param=param)
-    
-    n.pool4 = max_pool(n.relu4_3, 2, stride=2)
-    
-    n.conv5_1, n.relu5_1 = conv_relu(n.pool4, 3, 512, pad=1, param=param)
-    n.conv5_2, n.relu5_2 = conv_relu(n.relu5_1, 3, 512, pad=1, param=param)
-    n.conv5_3, n.relu5_3 = conv_relu(n.relu5_2, 3, 512, pad=1, param=param)
-    
-    n.pool5 = max_pool(n.relu5_3, 2, stride=2)
-    
-    n.fc6_aes, n.relu6_aes = fc_relu(n.pool5, 1000, param=learned_param)
-    if train:
-        n.drop6_aes = fc7input_aes = L.Dropout(n.relu6_aes, in_place=True)
-    else:
-        fc7input_aes = n.relu6_aes
-    n.fc7_aes, n.relu7_aes = fc_relu(fc7input_aes, 1000, param=learned_param)
-    if train:
-        n.drop7_aes = fc8input = L.Dropout(n.relu7_aes, in_place=True)
-    else:
-        fc8input = n.relu7_aes
-    # always learn fc8 (param=learned_param)
-    fc8 = L.InnerProduct(fc8input, num_output=num_classes, param=learned_param)
-    # give fc8 the name specified by argument `classifier_name`
-    n.__setattr__(classifier_name, fc8)
-    if not train:
-        n.probs = L.Softmax(fc8)
-    if label is not None:
-        n.label = label
-        n.loss = L.SoftmaxWithLoss(fc8, n.label)
-        n.acc = L.Accuracy(fc8, n.label)
-    # write the net to a temporary file and return its filename
-    with tempfile.NamedTemporaryFile(delete=False) as f:
-        f.write((str(n.to_proto())).encode())
-        return f.name
-    
-def caffenet_only1aes_net(train=True, learn_all=False, subset=None, source_path=''):
+def caffenet_net(train=True, learn_all=False, subset=None, source_path=''):
     if subset is None:
         subset = 'train' if train else 'test'
         
@@ -252,43 +150,8 @@ def caffenet_only1aes_net(train=True, learn_all=False, subset=None, source_path=
         batch_size=128, new_height=256, new_width=256, ntop=2)
     return caffenet(data=style_data, label=style_label, train=train,num_classes=2,classifier_name='fc8_aesthetic', learn_all=learn_all)
 
-def caffenet_only1aes_test():
-    caffe_root = '/opt/caffe/'
-    aes_data = L.Input(input_param=dict(shape=dict(dim=[100, 3, 227, 227])))
-    return caffenet(data=aes_data, 
-                        label=None, 
-                        train=False,
-                        num_classes=2,
-                        classifier_name='fc8_aesthetic', 
-                        learn_all=False)
-    
-def caffenet_aes_net(train=True, learn_all=False, subset=None, source_path=''):
-    if subset is None:
-        subset = 'train' if train else 'test'
-    
-    source = source_path % subset
-    caffe_root = '/opt/caffe/'
-    
-    transform_param = dict(mirror=train, crop_size=227,
-        mean_file=caffe_root + 'data/ilsvrc12/imagenet_mean.binaryproto')
-    style_data, style_label = L.ImageData(
-        transform_param=transform_param, source=source,
-        batch_size=128, new_height=256, new_width=256, ntop=2)
-    
-    return caffenet_aes(data=style_data, label=style_label, train=train,num_classes=2,classifier_name='fc8_aesthetic', learn_all=learn_all)
 
-
-def caffenet_aes_test():
-    caffe_root = '/opt/caffe/'
-    aes_data = L.Input(input_param=dict(shape=dict(dim=[100, 3, 227, 227])))
-    return caffenet_aes(data=aes_data, 
-                        label=None, 
-                        train=False,
-                        num_classes=2,
-                        classifier_name='fc8_aesthetic', 
-                        learn_all=False)
-    
-def VGG16_only1aes_net(train=True, learn_all=False, subset=None, source_path=''):
+def VGG16_net(train=True, learn_all=False, subset=None, source_path=''):
     if subset is None:
         subset = 'train' if train else 'test'
     
@@ -308,46 +171,6 @@ def VGG16_only1aes_net(train=True, learn_all=False, subset=None, source_path='')
                      learn_all=learn_all)
     
 
-def VGG16_only1aes_test():
-    caffe_root = '/opt/caffe/'
-    aes_data = L.Input(input_param=dict(shape=dict(dim=[100, 3, 224, 224])))
-    return VGG16(data=aes_data, 
-                        label=None, 
-                        train=False,
-                        num_classes=2,
-                        classifier_name='fc8_aesthetic', 
-                        learn_all=False)
-    
-def VGG16_aes_net(train=True, learn_all=False, subset=None, source_path=''):
-    if subset is None:
-        subset = 'train' if train else 'test'
-    
-    source = source_path % subset
-    caffe_root = '/opt/caffe/'
-    
-    transform_param = dict(mirror=train, crop_size=224,
-        mean_file=caffe_root + 'data/ilsvrc12/imagenet_mean.binaryproto')
-    style_data, style_label = L.ImageData(
-        transform_param=transform_param, source=source,
-        batch_size=256, new_height=256, new_width=256, ntop=2)
-    return VGG16_aes(data=style_data, 
-                     label=style_label, 
-                     train=train,
-                     num_classes=2,
-                     classifier_name='fc8_aesthetic', 
-                     learn_all=learn_all)
-    
-
-def VGG16_aes_test():
-    caffe_root = '/opt/caffe/'
-    aes_data = L.Input(input_param=dict(shape=dict(dim=[100, 3, 224, 224])))
-    return VGG16_aes(data=aes_data, 
-                        label=None, 
-                        train=False,
-                        num_classes=2,
-                        classifier_name='fc8_aesthetic', 
-                        learn_all=False)
-    
 def solver(train_net_path, test_net_path=None, base_lr=0.001, snapshot_pref=''):
     s = caffe_pb2.SolverParameter()
 
