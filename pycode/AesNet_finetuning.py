@@ -22,26 +22,27 @@ from caffe import layers as L
 # If you get "No module named _caffe", either you have not built pycaffe or you have the wrong path.
 
 
-import aestheticNet
+import AesNet
 from preprocess import utilities 
 
 caffe.set_device(0)  # if we have multiple GPUs, pick the first one
 #weights = caffe_root + 'models/VGG-16/VGG_ILSVRC_16_layers.caffemodel'
 weights = caffe_root + 'models/bvlc_reference_caffenet/bvlc_reference_caffenet.caffemodel'
 
-niter = 100000  # number of iterations to train
+niter = 30000  # number of iterations to train
 
 # Reset style_solver as before.
-style_solver_filename = aestheticNet.solver(aestheticNet.caffenet_only1aes_net(train=True,
-                                                                       source_path='models/%s_partition_finetuning.txt'),
-                                           snapshot_pref = 'models/CaffeNet_only1Aes',
+style_solver_filename = AesNet.solver(AesNet.AesNet_CaffeNet(train=True, 
+                                                    source_path='models/%s_partition_finetuning_standard_AVA_balanced.txt',
+                                                            fc_nodes=250),
+                                           snapshot_pref = 'models/AesNet_CaffeNet_250_standard_AVA_balanced',
                                            base_lr=0.001)
 style_solver = caffe.get_solver(style_solver_filename)
 style_solver.net.copy_from(weights)
 
 print ('Running solvers for %d iterations...' % niter)
 solvers = [('pretrained', style_solver)]
-loss, acc, weights = aestheticNet.run_solvers(niter, solvers)
+loss, acc, weights = AesNet.run_solvers(niter, solvers)
 print ('Done.')
 
 train_loss = loss['pretrained']
@@ -51,4 +52,4 @@ style_weights = weights['pretrained']
 # Delete solvers to save memory.
 del style_solver, solvers
 
-os.rename(weights['pretrained'], "models/AesNet_CaffeNet_only1.caffemodel")
+os.rename(weights['pretrained'], "models/AesNet_CaffeNet_250_standard_AVA_balanced.caffemodel")
