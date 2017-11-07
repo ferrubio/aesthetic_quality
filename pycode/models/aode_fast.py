@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from scipy.misc import logsumexp
 import warnings
 
@@ -137,7 +138,7 @@ class AODE_fast():
 
     def predict_class(self, dataset):
         aux=self._predict_probs_base(dataset)
-        return pd.Categorical(self.variables_dict[self.class_index][np.argmax(aux, axis=0)],self.variables_dict[self.class_index])
+        return pd.Categorical(self.variables_dict[self.class_index][np.argmax(aux, axis=1)],self.variables_dict[self.class_index])
 
     def _initialize_fun(self,dataset):
         # Check the class

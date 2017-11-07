@@ -88,7 +88,7 @@ class MDL_method(Discretize):
         data_to_cut = dataset.sort_values([self.index[i]]).loc[:,[self.index[i],self.class_index]]
             
         # this variables are for reduce memory in the recursive calls of cutPointsForSubset
-        self._stored_classes = np.array(data_to_cut[self.class_index])
+        self._stored_classes = np.array(data_to_cut[self.class_index].cat.codes)
         self._stored_data = np.array(data_to_cut[self.index[i]])
 
         return self.cutPointsForSubset(0,num_cases)
