@@ -99,6 +99,7 @@ def AesNet_CaffeNet(train=True, learn_all=False, subset=None, source_path='', fc
             batch_size=128, new_height=256, new_width=256, ntop=2)
         
     else:
+        print("Test")
         data = L.Input(input_param=dict(shape=dict(dim=[100, 3, 227, 227])))
         label = None
         train = False

@@ -36,16 +36,16 @@ data.sort_values(['id'],inplace=True)
 data.reset_index(inplace=True,drop=True)
 
 #test_cases = data.loc[pickle.load(gzip.open( "models/test_indexes_AesNet.pklz", "rb" , 2))]
-test_cases = data.loc[pickle.load(gzip.open( "models/test_indexes_AesNet_standard_AVA.pklz", "rb" , 2))]
+test_cases = data.loc[pickle.load(gzip.open( "models/test_indexes_AesNet_standard_AVA_balanced.pklz", "rb" , 2))]
 test_files = np.array(['/home/frubio/AVA/AVADataset/{:}.jpg'.format(i) for i in test_cases['id']])
 test_classes = np.array(test_cases['Class'])
 
 
-value_list = [30000,40000,50000]
+value_list = [1000,2000,3000,4000,5000,6000,7000,8000,9000,10000]
 
 for iter_value in value_list:
-    model_def = AesNet.AesNet_CaffeNet(train=False, fc_nodes=4096)
-    model_weights = "models/CaffeNet_only1Aes_standard_AVA_iter_{:}.caffemodel".format(iter_value)
+    model_def = AesNet.AesNet_CaffeNet(train=False, fc_nodes=250)
+    model_weights = "models/AesNet_CaffeNet_250_standard_AVA_balanced_iter_{:}.caffemodel".format(iter_value)
     #model_weights = "models/AesNet_CaffeNet.caffemodel"
     
     net = caffe.Net(model_def,      # defines the structure of the model
@@ -93,4 +93,4 @@ for iter_value in value_list:
     results['AUC'] = roc_auc_score(test_classes, output_prob)
     results['accuracy'] = accuracy_score(test_classes, (output_prob >= 0.5).astype(int))
 
-    pickle.dump(results, gzip.open( "results/CaffeNet_only1Aes_standard_AVA_iter_{:}.pklz".format(iter_value), "wb" ), 2)
+    pickle.dump(results, gzip.open( "results/AesNet_CaffeNet_250_standard_AVA_balanced_iter_{:}.pklz".format(iter_value), "wb" ), 2)
