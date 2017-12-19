@@ -108,7 +108,7 @@ class Naive_Bayes():
 
     def predict_probs(self, dataset):
         probs = self._predict_probs_base(dataset)
-        return np.exp(probs - logsumexp(probs,axis=0))
+        return np.transpose(np.exp(probs - logsumexp(probs,axis=0)))
 
     def predict_class(self, dataset):        
         aux=self._predict_probs_base(dataset)
